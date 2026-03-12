@@ -1,16 +1,23 @@
-"""This file contains the prompts for the agent."""
-
 import os
 from datetime import datetime
 
 from app.core.config import settings
 
 
-def load_system_prompt(**kwargs):
-    """Load the system prompt from the file."""
-    with open(os.path.join(os.path.dirname(__file__), "system.md"), "r") as f:
-        return f.read().format(
-            agent_name=settings.PROJECT_NAME + " Agent",
-            current_date_and_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            **kwargs,
-        )
+def load_poker_prompt(role: str, **kwargs) -> str:
+    """Загружает MD-файл промпта и подставляет в него переменные."""
+
+    prompt_path = os.path.join(os.path.dirname(__file__), "..", "prompts", f"poker_{role}.md")
+
+    with open(prompt_path, encoding="utf-8") as f:
+        template = f.read()
+
+    base_params = {
+        "agent_name": f"{settings.PROJECT_NAME} {role.capitalize()}",
+        "current_date_and_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "long_term_memory": kwargs.get("long_term_memory", "Нет данных о стиле игры противников."),
+    }
+
+    final_kwargs = {**base_params, **kwargs}
+
+    return template.format(**final_kwargs)

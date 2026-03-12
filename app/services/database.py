@@ -1,10 +1,5 @@
 """This file contains the database service for the application."""
 
-from typing import (
-    List,
-    Optional,
-)
-
 from fastapi import HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.pool import QueuePool
@@ -87,7 +82,7 @@ class DatabaseService:
             logger.info("user_created", email=email)
             return user
 
-    async def get_user(self, user_id: int) -> Optional[User]:
+    async def get_user(self, user_id: int) -> User | None:
         """Get a user by ID.
 
         Args:
@@ -100,7 +95,7 @@ class DatabaseService:
             user = session.get(User, user_id)
             return user
 
-    async def get_user_by_email(self, email: str) -> Optional[User]:
+    async def get_user_by_email(self, email: str) -> User | None:
         """Get a user by email.
 
         Args:
@@ -171,7 +166,7 @@ class DatabaseService:
             logger.info("session_deleted", session_id=session_id)
             return True
 
-    async def get_session(self, session_id: str) -> Optional[ChatSession]:
+    async def get_session(self, session_id: str) -> ChatSession | None:
         """Get a session by ID.
 
         Args:
@@ -184,7 +179,7 @@ class DatabaseService:
             chat_session = session.get(ChatSession, session_id)
             return chat_session
 
-    async def get_user_sessions(self, user_id: int) -> List[ChatSession]:
+    async def get_user_sessions(self, user_id: int) -> list[ChatSession]:
         """Get all sessions for a user.
 
         Args:

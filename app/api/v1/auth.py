@@ -5,7 +5,6 @@ and token verification.
 """
 
 import uuid
-from typing import List
 
 from fastapi import (
     APIRouter,
@@ -97,7 +96,7 @@ async def get_current_user(
             status_code=422,
             detail="Invalid token format",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from ve
 
 
 async def get_current_session(
@@ -150,7 +149,7 @@ async def get_current_session(
             status_code=422,
             detail="Invalid token format",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from ve
 
 
 @router.post("/register", response_model=UserResponse)
@@ -186,7 +185,7 @@ async def register_user(request: Request, user_data: UserCreate):
         return UserResponse(id=user.id, email=user.email, token=token)
     except ValueError as ve:
         logger.error("user_registration_validation_failed", error=str(ve), exc_info=True)
-        raise HTTPException(status_code=422, detail=str(ve))
+        raise HTTPException(status_code=422, detail=str(ve)) from ve
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -233,7 +232,7 @@ async def login(
         return TokenResponse(access_token=token.access_token, token_type="bearer", expires_at=token.expires_at)
     except ValueError as ve:
         logger.error("login_validation_failed", error=str(ve), exc_info=True)
-        raise HTTPException(status_code=422, detail=str(ve))
+        raise HTTPException(status_code=422, detail=str(ve)) from ve
 
 
 @router.post("/session", response_model=SessionResponse)
@@ -267,7 +266,7 @@ async def create_session(user: User = Depends(get_current_user)):
         return SessionResponse(session_id=session_id, name=session.name, token=token)
     except ValueError as ve:
         logger.error("session_creation_validation_failed", error=str(ve), user_id=user.id, exc_info=True)
-        raise HTTPException(status_code=422, detail=str(ve))
+        raise HTTPException(status_code=422, detail=str(ve)) from ve
 
 
 @router.patch("/session/{session_id}/name", response_model=SessionResponse)
@@ -303,7 +302,7 @@ async def update_session_name(
         return SessionResponse(session_id=sanitized_session_id, name=session.name, token=token)
     except ValueError as ve:
         logger.error("session_update_validation_failed", error=str(ve), session_id=session_id, exc_info=True)
-        raise HTTPException(status_code=422, detail=str(ve))
+        raise HTTPException(status_code=422, detail=str(ve)) from ve
 
 
 @router.delete("/session/{session_id}")
@@ -332,10 +331,10 @@ async def delete_session(session_id: str, current_session: Session = Depends(get
         logger.info("session_deleted", session_id=session_id, user_id=current_session.user_id)
     except ValueError as ve:
         logger.error("session_deletion_validation_failed", error=str(ve), session_id=session_id, exc_info=True)
-        raise HTTPException(status_code=422, detail=str(ve))
+        raise HTTPException(status_code=422, detail=str(ve)) from ve
 
 
-@router.get("/sessions", response_model=List[SessionResponse])
+@router.get("/sessions", response_model=list[SessionResponse])
 async def get_user_sessions(user: User = Depends(get_current_user)):
     """Get all session IDs for the authenticated user.
 
@@ -357,4 +356,4 @@ async def get_user_sessions(user: User = Depends(get_current_user)):
         ]
     except ValueError as ve:
         logger.error("get_sessions_validation_failed", user_id=user.id, error=str(ve), exc_info=True)
-        raise HTTPException(status_code=422, detail=str(ve))
+        raise HTTPException(status_code=422, detail=str(ve)) from ve

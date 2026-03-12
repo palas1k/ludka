@@ -13,9 +13,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import (
     Any,
-    Dict,
-    List,
-    Optional,
 )
 
 import structlog
@@ -29,7 +26,7 @@ from app.core.config import (
 settings.LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Context variables for storing request-specific data
-_request_context: ContextVar[Dict[str, Any]] = ContextVar("request_context", default={})
+_request_context: ContextVar[dict[str, Any] | None] = ContextVar("request_context", default=None)
 
 
 def bind_context(**kwargs: Any) -> None:
@@ -47,7 +44,7 @@ def clear_context() -> None:
     _request_context.set({})
 
 
-def get_context() -> Dict[str, Any]:
+def get_context() -> dict[str, Any]:
     """Get the current logging context.
 
     Returns:
@@ -56,7 +53,7 @@ def get_context() -> Dict[str, Any]:
     return _request_context.get()
 
 
-def add_context_to_event_dict(logger: Any, method_name: str, event_dict: Dict[str, Any]) -> Dict[str, Any]:
+def add_context_to_event_dict(logger: Any, method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
     """Add context variables to the event dictionary.
 
     This processor adds any bound context variables to each log event.
@@ -123,7 +120,7 @@ class JsonlFileHandler(logging.Handler):
         super().close()
 
 
-def get_structlog_processors(include_file_info: bool = True) -> List[Any]:
+def get_structlog_processors(include_file_info: bool = True) -> list[Any]:
     """Get the structlog processors based on configuration.
 
     Args:
@@ -174,7 +171,7 @@ def setup_logging() -> None:
     """
     # Determine log level based on DEBUG setting
     log_level = logging.DEBUG if settings.DEBUG else logging.INFO
-    
+
     # Create file handler for JSON logs
     file_handler = JsonlFileHandler(get_log_file_path())
     file_handler.setLevel(log_level)
@@ -186,8 +183,7 @@ def setup_logging() -> None:
     # Get shared processors
     shared_processors = get_structlog_processors(
         # Include detailed file info only in development and test
-        include_file_info=settings.ENVIRONMENT
-        in [Environment.DEVELOPMENT, Environment.TEST]
+        include_file_info=settings.ENVIRONMENT in [Environment.DEVELOPMENT, Environment.TEST]
     )
 
     # Configure standard logging

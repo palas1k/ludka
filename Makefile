@@ -2,7 +2,7 @@ install:
 	pip install uv
 	uv sync
 
-DOCKER_COMPOSE ?= docker-compose
+DOCKER_COMPOSE ?= docker compose
 
 set-env:
 	@if [ -z "$(ENV)" ]; then \
@@ -88,7 +88,7 @@ docker-run-env:
 		echo "Environment file $$ENV_FILE not found. Please create it."; \
 		exit 1; \
 	fi; \
-	APP_ENV=$(ENV) $(DOCKER_COMPOSE) --env-file $$ENV_FILE up -d --build db app
+	APP_ENV=$(ENV) $(DOCKER_COMPOSE) --env-file $$ENV_FILE up -d --build --remove-orphans
 	# @./scripts/ensure-db-user.sh $(ENV)
 
 docker-logs:

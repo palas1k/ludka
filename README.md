@@ -73,7 +73,7 @@ uv sync
 3. Copy the example environment file:
 
 ```bash
-cp .env.example .env.[development|staging|production] # e.g. .env.development
+cp .env.development.example .env.development.[development|staging|production] # e.g. .env.development.development
 ```
 
 4. Update the `.env` file with your configuration (see `.env.example` for reference)

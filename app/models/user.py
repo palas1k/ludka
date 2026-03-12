@@ -2,7 +2,6 @@
 
 from typing import (
     TYPE_CHECKING,
-    List,
 )
 
 import bcrypt
@@ -28,10 +27,10 @@ class User(BaseModel, table=True):
         sessions: Relationship to user's chat sessions
     """
 
-    id: int = Field(default=None, primary_key=True)
+    telegram_id: int = Field(default=None, primary_key=True)
     email: str = Field(unique=True, index=True)
     hashed_password: str
-    sessions: List["Session"] = Relationship(back_populates="user")
+    sessions: list["Session"] = Relationship(back_populates="user")
 
     def verify_password(self, password: str) -> bool:
         """Verify if the provided password matches the hash."""

@@ -4,10 +4,6 @@ import html
 import re
 from typing import (
     Any,
-    Dict,
-    List,
-    Optional,
-    Union,
 )
 
 
@@ -55,7 +51,7 @@ def sanitize_email(email: str) -> str:
     return email.lower()
 
 
-def sanitize_dict(data: Dict[str, Any]) -> Dict[str, Any]:
+def sanitize_dict(data: dict[str, Any]) -> dict[str, Any]:
     """Recursively sanitize all string values in a dictionary.
 
     Args:
@@ -77,7 +73,7 @@ def sanitize_dict(data: Dict[str, Any]) -> Dict[str, Any]:
     return sanitized
 
 
-def sanitize_list(data: List[Any]) -> List[Any]:
+def sanitize_list(data: list[Any]) -> list[Any]:
     """Recursively sanitize all string values in a list.
 
     Args:

@@ -6,4 +6,4 @@ from app.services.llm import (
     llm_service,
 )
 
-__all__ = ["database_service", "LLMRegistry", "llm_service"]
+__all__ = ["LLMRegistry", "database_service", "llm_service"]

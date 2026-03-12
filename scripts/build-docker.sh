@@ -23,11 +23,11 @@ echo "Building Docker image for $ENV environment"
 ENV_FILE=".env.$ENV"
 if [ ! -f "$ENV_FILE" ]; then
     echo "Warning: $ENV_FILE not found. Creating from .env.example"
-    if [ ! -f .env.example ]; then
+    if [ ! -f .env.development.example ]; then
         echo "Error: .env.example not found"
         exit 1
     fi
-    cp .env.example "$ENV_FILE"
+    cp .env.development.example "$ENV_FILE"
     echo "Please update $ENV_FILE with your configuration before running the container"
 fi
 

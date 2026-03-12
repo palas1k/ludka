@@ -38,12 +38,22 @@ dependencies = [
     "tenacity>=9.1.2",
     "mem0ai>=1.0.0",
     "uvloop>=0.22.1",
+    "gigachat>=0.2.0",
+    "ruff>=0.11.4",
+    "aio-pika>=9.5.8",
+    "pre-commit>=4.5.1",
 ]
 
 [project.optional-dependencies]
 dev = ["black", "isort", "flake8", "ruff", "djlint==1.36.4"]
 
 [dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "pre-commit>=4.5.1",
+    "ruff>=0.11.4",
+    "types-python-jose>=3.5.0.20250531",
+]
 test = ["httpx>=0.28.1", "pytest>=8.3.5"]
 
 
@@ -86,20 +96,58 @@ disable = [
 ignore = "migrations"
 
 [tool.ruff]
-line-length = 119
-exclude = ["migrations", "*.ipynb", "venv"]
+# Общие настройки
+line-length = 120
+target-version = "py312"
+
+extend-exclude = [
+    ".venv",
+    "venv",
+    "env",
+    "virtualenv",
+    "site-packages",
+    "dist",
+    "build",
+]
 
 [tool.ruff.lint]
-# Enable flake8-bugbear (`B`) rules and docstring (`D`) rules
-select = ["E", "F", "B", "ERA", "D"]
-# Never enforce `E501` (line length violations).
-ignore = ["E501", "F401", "D203", "D213", "B904", "B008"]
-# Avoid trying to fix flake8-bugbear (`B`) violations.
-unfixable = ["B"]
+# Самый мощный набор правил
+select = [
+    "F",       # Pyflakes (ошибки)
+    "E", "W",  # pycodestyle (стиль PEP8)
+    "I",       # isort (сортировка импортов)
+    "N",       # pep8-naming (имена переменных/классов)
+    "UP",      # pyupgrade (современный синтаксис)
+    "B",       # flake8-bugbear (поиск багов)
+    "SIM",     # flake8-simplify (упрощение кода)
+    "PTH",     # flake8-use-pathlib (замена os.path на pathlib)
+    "RUF",     # специфичные правила самого Ruff
+    "ASYNC",   # проверки для асинхронного кода
+]
+ignore = [
+    "PTH100", # abspath
+    "PTH118", # join
+    "PTH120", # dirname
+    "PTH123", # open
+    "PTH103",
+    "RUF003",
+    "RUF001",
+    "RUF002",
+    "PTH113",
+]
 
-[tool.ruff.lint.pydocstyle]
-convention = "google"
-
-# Ignore `E402` (import violations) in all `__init__.py` files
+# Настройки по конкретным файлам
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["E402"]
+"__init__.py" = ["F401"] # игнорировать неиспользуемые импорты в инитах
+"tests/*" = ["S101"]    # разрешить assert в тестах
+
+[tool.ruff.lint.flake8-bugbear]
+# Разрешаем вызывать Depends и Query в аргументах
+extend-immutable-calls = ["fastapi.Depends", "fastapi.params.Depends", "fastapi.Query"]
+
+[tool.ruff.format]
+# Настройки форматтера (аналог Black)
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true # форматировать код внутри докстрингов!
+

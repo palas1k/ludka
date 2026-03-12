@@ -1,27 +1,19 @@
 """Application configuration management.
 
 This module handles environment-specific configuration loading, parsing, and management
-for the application. It includes environment detection, .env file loading, and
+for the application. It includes environment detection, .env.development file loading, and
 configuration value parsing.
 """
 
-import json
 import os
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
-from typing import (
-    Any,
-    Dict,
-    List,
-    Optional,
-    Union,
-)
 
 from dotenv import load_dotenv
 
 
 # Define environment types
-class Environment(str, Enum):
+class Environment(StrEnum):
     """Application environment types.
 
     Defines the possible environments the application can run in:
@@ -52,19 +44,19 @@ def get_environment() -> Environment:
             return Environment.DEVELOPMENT
 
 
-# Load appropriate .env file based on environment
+# Load appropriate .env.development file based on environment
 def load_env_file():
-    """Load environment-specific .env file."""
+    """Load environment-specific .env.development file."""
     env = get_environment()
     print(f"Loading environment: {env}")
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
     # Define env files in priority order
     env_files = [
-        os.path.join(base_dir, f".env.{env.value}.local"),
-        os.path.join(base_dir, f".env.{env.value}"),
-        os.path.join(base_dir, ".env.local"),
-        os.path.join(base_dir, ".env"),
+        os.path.join(base_dir, f".env.development.{env.value}.local"),
+        os.path.join(base_dir, f".env.development.{env.value}"),
+        os.path.join(base_dir, ".env.development.local"),
+        os.path.join(base_dir, ".env.development"),
     ]
 
     # Load the first env file that exists
@@ -149,13 +141,17 @@ class Settings:
 
         # LangGraph Configuration
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-        self.DEFAULT_LLM_MODEL = os.getenv("DEFAULT_LLM_MODEL", "gpt-5-mini")
+        self.DEFAULT_LLM_MODEL = os.getenv("DEFAULT_LLM_MODEL", "gigachat")
         self.DEFAULT_LLM_TEMPERATURE = float(os.getenv("DEFAULT_LLM_TEMPERATURE", "0.2"))
         self.MAX_TOKENS = int(os.getenv("MAX_TOKENS", "2000"))
         self.MAX_LLM_CALL_RETRIES = int(os.getenv("MAX_LLM_CALL_RETRIES", "3"))
 
+        # GigaChat
+        self.GIGACHAT_API_KEY = os.getenv("GIGACHAT_API_KEY", "")
+        self.GIGACHAT_ID = os.getenv("GIGACHAT_ID", "")
+
         # Long term memory Configuration
-        self.LONG_TERM_MEMORY_MODEL = os.getenv("LONG_TERM_MEMORY_MODEL", "gpt-5-nano")
+        self.LONG_TERM_MEMORY_MODEL = os.getenv("LONG_TERM_MEMORY_MODEL", "gigachat")
         self.LONG_TERM_MEMORY_EMBEDDER_MODEL = os.getenv("LONG_TERM_MEMORY_EMBEDDER_MODEL", "text-embedding-3-small")
         self.LONG_TERM_MEMORY_COLLECTION_NAME = os.getenv("LONG_TERM_MEMORY_COLLECTION_NAME", "longterm_memory")
         # JWT Configuration
@@ -177,6 +173,8 @@ class Settings:
         self.POSTGRES_POOL_SIZE = int(os.getenv("POSTGRES_POOL_SIZE", "20"))
         self.POSTGRES_MAX_OVERFLOW = int(os.getenv("POSTGRES_MAX_OVERFLOW", "10"))
         self.CHECKPOINT_TABLES = ["checkpoint_blobs", "checkpoint_writes", "checkpoints"]
+
+        self.RABBITMQ_URL = os.getenv("RABBITMQ_URL", "")
 
         # Rate Limiting Configuration
         self.RATE_LIMIT_DEFAULT = parse_list_from_env("RATE_LIMIT_DEFAULT", ["200 per day", "50 per hour"])
@@ -201,7 +199,7 @@ class Settings:
                 self.RATE_LIMIT_ENDPOINTS[endpoint] = value
 
         # Evaluation Configuration
-        self.EVALUATION_LLM = os.getenv("EVALUATION_LLM", "gpt-5")
+        self.EVALUATION_LLM = os.getenv("EVALUATION_LLM", "gigachat")
         self.EVALUATION_BASE_URL = os.getenv("EVALUATION_BASE_URL", "https://api.openai.com/v1")
         self.EVALUATION_API_KEY = os.getenv("EVALUATION_API_KEY", self.OPENAI_API_KEY)
         self.EVALUATION_SLEEP_TIME = int(os.getenv("EVALUATION_SLEEP_TIME", "10"))

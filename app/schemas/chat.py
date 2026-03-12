@@ -2,7 +2,6 @@
 
 import re
 from typing import (
-    List,
     Literal,
 )
 
@@ -58,7 +57,7 @@ class ChatRequest(BaseModel):
         messages: List of messages in the conversation.
     """
 
-    messages: List[Message] = Field(
+    messages: list[Message] = Field(
         ...,
         description="List of messages in the conversation",
         min_length=1,
@@ -72,7 +71,7 @@ class ChatResponse(BaseModel):
         messages: List of messages in the conversation.
     """
 
-    messages: List[Message] = Field(..., description="List of messages in the conversation")
+    messages: list[Message] = Field(..., description="List of messages in the conversation")
 
 
 class StreamResponse(BaseModel):

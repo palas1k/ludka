@@ -2,7 +2,6 @@
 
 from typing import (
     TYPE_CHECKING,
-    List,
 )
 
 from sqlmodel import (
@@ -29,6 +28,6 @@ class Session(BaseModel, table=True):
     """
 
     id: str = Field(primary_key=True)
-    user_id: int = Field(foreign_key="user.id")
+    telegram_id: int = Field(foreign_key="user.telegram_id")
     name: str = Field(default="")
     user: "User" = Relationship(back_populates="sessions")

@@ -20,6 +20,17 @@ services:
     networks:
       - monitoring
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    networks:
+      - monitoring
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "check_running" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   # Single API service with dynamic environment
   app:
     build:
@@ -32,15 +43,18 @@ services:
       - ./app:/app/app
       - ./logs:/app/logs
     env_file:
-      - .env.${APP_ENV:-development}
+      - .env.development.${APP_ENV:-development}
     environment:
       - APP_ENV=${APP_ENV:-development}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-supersecretkeythatshouldbechangedforproduction}
+      - BROKER_URL=amqp://guest:guest@rabbitmq:5672/
     depends_on:
       db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-m", "http.client", "localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -65,6 +79,7 @@ services:
   # Grafana
   grafana:
     image: grafana/grafana:latest
+    user: "0"
     ports:
       - "3000:3000"
     volumes:
@@ -91,6 +106,22 @@ services:
       - monitoring
     restart: always
 
+  worker:
+    build:
+      context: .
+    volumes:
+      - .:/app
+    env_file:
+      - .env.development.${APP_ENV:-development}
+    command: /app/.venv/bin/python -u -m app.run_worker
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - monitoring
+
 
 networks:
   monitoring:
@@ -99,3 +130,4 @@ networks:
 volumes:
   grafana-storage:
   postgres-data:
+  rabbitmq:

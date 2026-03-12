@@ -8,7 +8,6 @@ from datetime import (
     datetime,
     timedelta,
 )
-from time import sleep
 
 import openai
 from langfuse import Langfuse
@@ -94,7 +93,7 @@ class Evaluator:
                 trace_results[trace_id]["metrics_evaluated"] += 1
 
             process_trace_results(self.report, trace_id, trace_results, len(metrics))
-            sleep(settings.EVALUATION_SLEEP_TIME)
+            await asyncio.sleep(settings.EVALUATION_SLEEP_TIME)
 
         self.report["duration_seconds"] = round(time.time() - start_time, 2)
         calculate_avg_scores(self.report)
@@ -177,9 +176,9 @@ class Evaluator:
                 )
                 return response.choices[0].message.parsed
             except Exception as e:
-                SLEEP_TIME = 10
-                logger.error("Error calling OpenAI", error=str(e), sleep_time=SLEEP_TIME)
-                sleep(SLEEP_TIME)
+                sleep_time = 10
+                logger.error("Error calling OpenAI", error=str(e), sleep_time=sleep_time)
+                await asyncio.sleep(sleep_time)
                 continue
         return None
 

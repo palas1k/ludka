@@ -1,0 +1,10 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Актуальная версия Ruff (можно оставить v0.3.0, но лучше обновить)
+    rev: v0.15.6
+    hooks:
+      # Линтер (проверка и автофикс)
+      - id: ruff
+        args: [ --fix ]
+      # Форматтер (красивые отступы)
+      - id: ruff-format

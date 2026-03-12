@@ -1,12 +1,12 @@
 """LLM service for managing LLM calls with retries and fallback mechanisms."""
 
+from contextlib import suppress
 from typing import (
     Any,
-    Dict,
-    List,
-    Optional,
+    ClassVar,
 )
 
+from langchain_community.chat_models import GigaChat
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_openai import ChatOpenAI
@@ -25,7 +25,6 @@ from tenacity import (
 )
 
 from app.core.config import (
-    Environment,
     settings,
 )
 from app.core.logging import logger
@@ -39,54 +38,12 @@ class LLMRegistry:
     """
 
     # Class-level variable containing all available LLM models
-    LLMS: List[Dict[str, Any]] = [
+    LLMS: ClassVar[list[dict[str, Any]]] = [
         {
-            "name": "gpt-5-mini",
-            "llm": ChatOpenAI(
-                model="gpt-5-mini",
-                api_key=settings.OPENAI_API_KEY,
-                max_tokens=settings.MAX_TOKENS,
-                reasoning={"effort": "low"},
-            ),
-        },
-        {
-            "name": "gpt-5",
-            "llm": ChatOpenAI(
-                model="gpt-5",
-                api_key=settings.OPENAI_API_KEY,
-                max_tokens=settings.MAX_TOKENS,
-                reasoning={"effort": "medium"},
-            ),
-        },
-        {
-            "name": "gpt-5-nano",
-            "llm": ChatOpenAI(
-                model="gpt-5-nano",
-                api_key=settings.OPENAI_API_KEY,
-                max_tokens=settings.MAX_TOKENS,
-                reasoning={"effort": "minimal"},
-            ),
-        },
-        {
-            "name": "gpt-4o",
-            "llm": ChatOpenAI(
-                model="gpt-4o",
-                temperature=settings.DEFAULT_LLM_TEMPERATURE,
-                api_key=settings.OPENAI_API_KEY,
-                max_tokens=settings.MAX_TOKENS,
-                top_p=0.95 if settings.ENVIRONMENT == Environment.PRODUCTION else 0.8,
-                presence_penalty=0.1 if settings.ENVIRONMENT == Environment.PRODUCTION else 0.0,
-                frequency_penalty=0.1 if settings.ENVIRONMENT == Environment.PRODUCTION else 0.0,
-            ),
-        },
-        {
-            "name": "gpt-4o-mini",
-            "llm": ChatOpenAI(
-                model="gpt-4o-mini",
-                temperature=settings.DEFAULT_LLM_TEMPERATURE,
-                api_key=settings.OPENAI_API_KEY,
-                max_tokens=settings.MAX_TOKENS,
-                top_p=0.9 if settings.ENVIRONMENT == Environment.PRODUCTION else 0.8,
+            "name": "gigachat",
+            "llm": GigaChat(
+                credentials=settings.GIGACHAT_API_KEY,
+                verify_ssl_certs=False,
             ),
         },
     ]
@@ -128,7 +85,7 @@ class LLMRegistry:
         return model_entry["llm"]
 
     @classmethod
-    def get_all_names(cls) -> List[str]:
+    def get_all_names(cls) -> list[str]:
         """Get all registered LLM names in order.
 
         Returns:
@@ -137,7 +94,7 @@ class LLMRegistry:
         return [entry["name"] for entry in cls.LLMS]
 
     @classmethod
-    def get_model_at_index(cls, index: int) -> Dict[str, Any]:
+    def get_model_at_index(cls, index: int) -> dict[str, Any]:
         """Get model entry at specific index.
 
         Args:
@@ -160,7 +117,7 @@ class LLMService:
 
     def __init__(self):
         """Initialize the LLM service."""
-        self._llm: Optional[BaseChatModel] = None
+        self._llm: BaseChatModel | None = None
         self._current_model_index: int = 0
 
         # Find index of default model in registry
@@ -229,7 +186,7 @@ class LLMService:
         before_sleep=before_sleep_log(logger, "WARNING"),
         reraise=True,
     )
-    async def _call_llm_with_retry(self, messages: List[BaseMessage]) -> BaseMessage:
+    async def _call_llm_with_retry(self, messages: list[BaseMessage]) -> BaseMessage:
         """Call the LLM with automatic retry logic.
 
         Args:
@@ -266,8 +223,8 @@ class LLMService:
 
     async def call(
         self,
-        messages: List[BaseMessage],
-        model_name: Optional[str] = None,
+        messages: list[BaseMessage],
+        model_name: str | None = None,
         **model_kwargs,
     ) -> BaseMessage:
         """Call the LLM with the specified messages and circular fallback.
@@ -289,10 +246,8 @@ class LLMService:
                 self._llm = LLMRegistry.get(model_name, **model_kwargs)
                 # Update index to match the requested model
                 all_names = LLMRegistry.get_all_names()
-                try:
+                with suppress(ValueError):
                     self._current_model_index = all_names.index(model_name)
-                except ValueError:
-                    pass  # Keep current index if model name not in list
                 logger.info("using_requested_model", model_name=model_name, has_custom_kwargs=bool(model_kwargs))
             except ValueError as e:
                 logger.error("requested_model_not_found", model_name=model_name, error=str(e))
@@ -339,30 +294,16 @@ class LLMService:
 
         # All models failed
         raise RuntimeError(
-            f"failed to get response from llm after trying {models_tried} models. last error: {str(last_error)}"
+            f"failed to get response from llm after trying {models_tried} models. last error: {last_error!s}"
         )
 
-    def get_llm(self) -> Optional[BaseChatModel]:
+    def get_llm(self) -> BaseChatModel | None:
         """Get the current LLM instance.
 
         Returns:
             Current BaseChatModel instance or None if not initialized
         """
         return self._llm
-
-    def bind_tools(self, tools: List) -> "LLMService":
-        """Bind tools to the current LLM.
-
-        Args:
-            tools: List of tools to bind
-
-        Returns:
-            Self for method chaining
-        """
-        if self._llm:
-            self._llm = self._llm.bind_tools(tools)
-            logger.debug("tools_bound_to_llm", tool_count=len(tools))
-        return self
 
 
 # Create global LLM service instance

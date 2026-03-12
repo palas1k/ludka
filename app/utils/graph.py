@@ -101,4 +101,4 @@ def prepare_messages(messages: list[Message], llm: BaseChatModel, system_prompt:
         else:
             raise
 
-    return [Message(role="system", content=system_prompt)] + trimmed_messages
+    return [Message(role="system", content=system_prompt), *trimmed_messages]

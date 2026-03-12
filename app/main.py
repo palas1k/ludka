@@ -5,7 +5,6 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import (
     Any,
-    Dict,
 )
 
 from dotenv import load_dotenv
@@ -30,6 +29,7 @@ from app.core.middleware import (
     LoggingContextMiddleware,
     MetricsMiddleware,
 )
+from app.services.broker import PokerBroker
 from app.services.database import database_service
 
 # Load environment variables
@@ -52,7 +52,11 @@ async def lifespan(app: FastAPI):
         version=settings.VERSION,
         api_prefix=settings.API_V1_STR,
     )
+    broker = PokerBroker(settings.RABBITMQ_URL)
+    await broker.connect()
+    app.state.broker = broker
     yield
+    broker.connection.close()
     logger.info("application_shutdown")
 
 
@@ -140,7 +144,7 @@ async def root(request: Request):
 
 @app.get("/health")
 @limiter.limit(settings.RATE_LIMIT_ENDPOINTS["health"][0])
-async def health_check(request: Request) -> Dict[str, Any]:
+async def health_check(request: Request) -> dict[str, Any]:
     """Health check endpoint with environment-specific information.
 
     Returns:

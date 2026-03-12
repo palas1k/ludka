@@ -1,11 +1,11 @@
 """Metrics for evals."""
 
 import os
+from pathlib import Path
 
 metrics = []
 
-PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
+PROMPTS_DIR = Path(__file__).parent / "prompts"
 
-for file in os.listdir(PROMPTS_DIR):
-    if file.endswith(".md"):
-        metrics.append({"name": file.replace(".md", ""), "prompt": open(os.path.join(PROMPTS_DIR, file), "r").read()})
+for file_path in PROMPTS_DIR.glob("*.md"):
+    metrics.append({"name": file_path.stem, "prompt": file_path.read_text()})

@@ -7,8 +7,6 @@ import os
 import sys
 from typing import (
     Any,
-    Dict,
-    Optional,
 )
 
 import colorama
@@ -16,9 +14,7 @@ from colorama import (
     Fore,
     Style,
 )
-from tqdm import tqdm
 
-# Fix import path for app module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.core.config import settings
 from app.core.logging import logger
@@ -79,7 +75,7 @@ def print_success(message: str) -> None:
     print(f"{Fore.GREEN}✓ {message}{Style.RESET_ALL}")
 
 
-def get_user_input(prompt: str, default: Optional[str] = None) -> str:
+def get_user_input(prompt: str, default: str | None = None) -> str:
     """Get user input with a colored prompt.
 
     Args:
@@ -113,7 +109,7 @@ def get_yes_no(prompt: str, default: bool = True) -> bool:
     return response.lower() in ("y", "yes")
 
 
-def display_summary(report: Dict[str, Any]) -> None:
+def display_summary(report: dict[str, Any]) -> None:
     """Display a summary of the evaluation results.
 
     Args:
@@ -137,7 +133,9 @@ def display_summary(report: Dict[str, Any]) -> None:
         status_color = Fore.RED
 
     print(
-        f"{Fore.CYAN}Success Rate:{Style.RESET_ALL} {status_color}{success_rate:.1f}%{Style.RESET_ALL} ({report['successful_traces']}/{report['total_traces']})"
+        f"{Fore.CYAN}Success Rate:{Style.RESET_ALL} "
+        f"{status_color}{success_rate:.1f}%{Style.RESET_ALL} "
+        f"({report['successful_traces']}/{report['total_traces']})"
     )
 
     print("\n" + f"{Fore.CYAN}Metrics Summary:{Style.RESET_ALL}")
@@ -155,7 +153,8 @@ def display_summary(report: Dict[str, Any]) -> None:
             status_color = Fore.RED
 
         print(
-            f"  • {metric_name}: {status_color}{success_percent:.1f}%{Style.RESET_ALL} success, avg score: {data['avg_score']:.2f}"
+            f"  • {metric_name}: {status_color}"
+            f"{success_percent:.1f}%{Style.RESET_ALL} success, avg score: {data['avg_score']:.2f}"
         )
 
     if report["generate_report_path"]:
@@ -182,12 +181,12 @@ async def run_evaluation(generate_report: bool = True) -> None:
         display_summary(evaluator.report)
 
     except Exception as e:
-        print_error(f"Evaluation failed: {str(e)}")
+        print_error(f"Evaluation failed: {e!s}")
         logger.error("Evaluation failed", error=str(e))
         sys.exit(1)
 
 
-def display_configuration(config: Dict[str, Any]) -> None:
+def display_configuration(config: dict[str, Any]) -> None:
     """Display the current configuration.
 
     Args:
