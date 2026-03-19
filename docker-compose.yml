@@ -113,7 +113,7 @@ services:
       - .:/app
     env_file:
       - .env.development.${APP_ENV:-development}
-    command: /app/.venv/bin/python -u -m app.run_worker
+    command: uv run -m app.run_worker
     depends_on:
       rabbitmq:
         condition: service_healthy

@@ -16,6 +16,8 @@ async def start_game(request: Request, data: NewGameSchema):
         payload={"messages": [("user", "Начни раздачу")], "num_players": data.num_players},
     )
 
+    print(result)
+
     return {"log": [m["content"] for m in result["messages"]]}
 
 

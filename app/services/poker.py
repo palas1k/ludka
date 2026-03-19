@@ -1,6 +1,7 @@
 import re
 from typing import Literal
 
+from langchain_core.prompts import PromptTemplate
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.constants import END, START
 from langgraph.graph import StateGraph
@@ -67,17 +68,21 @@ class PokerService:
 
         new_pot = actual_sb + actual_bb
 
-        chain = load_poker_prompt(role="dealer") | self.llm_service
+        prompt_text = load_poker_prompt(role="dealer")
+        # Оборачиваем строку в объект, который понимает оператор "|"
+        prompt_template = PromptTemplate.from_template(prompt_text)
 
-        num_players = state.get("num_players", 1)
+        chain = prompt_template | self.llm_service.get_llm()
+
+        num_players = getattr(state, "num_players", 1)
 
         response = await chain.ainvoke(
             {
-                "chat_history": state["messages"],
+                "chat_history": state.messages,
                 "current_player_idx": 0,
                 "num_players": num_players,
-                "cards": state.get("hands", {}).get("human", "Не розданы"),
-                "board": state.get("board", "Пусто"),
+                "cards": state.hands.get("human", "Не розданы"),
+                "board": getattr(state, "board", "Пусто"),
                 "pot": new_pot,
             }
         )
@@ -101,6 +106,7 @@ class PokerService:
 
         if state.current_player_idx == 0:
             return "human_player"
+        print(state)
         return "ai_player"
 
     def create_swarm(self):

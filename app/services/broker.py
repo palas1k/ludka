@@ -30,25 +30,33 @@ class PokerBroker:
 
     async def process_task(self, message: aio_pika.IncomingMessage, graph, broker):
         async with message.process():
-            body = json.loads(message.body)
-            payload = body.get("payload")
-            session_id = body.get("session_id")
-            config = {"configurable": {"thread_id": session_id}}
+            try:
+                body = json.loads(message.body)
+                payload = body.get("payload")
+                session_id = body.get("session_id")
+                config = {"configurable": {"thread_id": session_id}}
 
-            # 1. Запуск LangGraph
-            result = await graph.ainvoke(payload, config=config)
+                # 1. Запуск LangGraph
+                result = await graph.ainvoke(payload, config=config)
 
-            # 2. Сериализация (LangGraph сообщения -> список строк/словарей)
-            # Нам нужно превратить объекты BaseMessage в обычный текст для JSON
-            messages_to_send = []
-            for m in result.get("messages", []):
-                if hasattr(m, "content"):
-                    messages_to_send.append({"role": m.type, "content": m.content})
-                else:
-                    messages_to_send.append(m)
+                print(f"LangGraph raw result: {result}")
 
-            response_payload = {"messages": messages_to_send, "pot": result.get("pot"), "board": result.get("board")}
+                # 2. Сериализация (LangGraph сообщения -> список строк/словарей)
+                # Нам нужно превратить объекты BaseMessage в обычный текст для JSON
+                messages_to_send = []
+                for m in result.get("messages", []):
+                    if hasattr(m, "content"):
+                        messages_to_send.append({"role": m.type, "content": m.content})
+                    else:
+                        messages_to_send.append(m)
 
+                response_payload = {
+                    "messages": messages_to_send,
+                    "pot": result.get("pot"),
+                    "board": result.get("board"),
+                }
+            except Exception as e:
+                logger.error(f"Ошибка в воркере: {e}", exc_info=True)
             # 3. Отправка ответа в callback-очередь (reply_to)
             if message.reply_to:
                 await broker.channel.default_exchange.publish(
