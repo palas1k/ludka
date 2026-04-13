@@ -89,21 +89,26 @@ class PokerBroker:
         # 3. Публикуем задачу в общую очередь 'poker_tasks'
         data = {"session_id": session_id, "task_type": task_type, "payload": payload}
 
-        logger.info("call_poker_ai")
-
         await self.channel.default_exchange.publish(
             Message(
                 body=json.dumps(data).encode(),
-                reply_to=callback_queue.name,  # Указываем Воркеру, куда слать ответ
-                correlation_id=corr_id,  # Помечаем запрос
+                reply_to=callback_queue.name,
+                correlation_id=corr_id,
             ),
             routing_key="poker_tasks",
         )
 
-        # 4. Ждем ответа (ставим 60 сек, покерные боты могут думать долго)
         try:
             return await asyncio.wait_for(future, timeout=60.0)
         finally:
-            # Обязательно чистим за собой
             await callback_queue.cancel(consumer_tag)
             await callback_queue.delete()
+
+    async def clear_session(self, session_id: str):
+        """Отправляет команду воркеру на очистку сессии"""
+        # Мы просто говорим брокеру: "Для этой сессии тип задачи - ОЧИСТКА"
+        await self.publish_move(
+            session_id=session_id,
+            task_type="CLEAR_SESSION",
+            payload={},  # Нам не нужно ничего передавать, просто сам факт команды
+        )

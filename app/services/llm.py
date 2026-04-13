@@ -41,10 +41,7 @@ class LLMRegistry:
     LLMS: ClassVar[list[dict[str, Any]]] = [
         {
             "name": "gigachat",
-            "llm": GigaChat(
-                credentials=settings.GIGACHAT_API_KEY,
-                verify_ssl_certs=False,
-            ),
+            "llm": GigaChat(credentials=settings.GIGACHAT_API_KEY, verify_ssl_certs=False, temperature=0.01),
         },
     ]
 

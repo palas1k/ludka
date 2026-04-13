@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field
 
 class PokerState(BaseModel):
     messages: Annotated[list, add_messages] = Field(default_factory=list)
-    # Используем список: индекс в списке = ID игрока
     player_stacks: list[int] = Field(default_factory=list, description="Стеки игроков в фишках")
     hands: dict[str, str] = Field(default_factory=dict)
     board: list[str] = Field(default_factory=list)
@@ -16,6 +15,9 @@ class PokerState(BaseModel):
     current_player_idx: int = Field(default=0)
     num_players: int = Field(default=2)
     llm_calls: int = Field(default=0)
+    street: Literal["preflop", "flop", "turn", "river", "showdown"] = Field(
+        default="preflop", description="Текущий этап раздачи"
+    )
 
 
 class DealerState(BaseModel):

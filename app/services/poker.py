@@ -1,6 +1,8 @@
+import random
 import re
-from typing import Literal
+from typing import ClassVar, Literal
 
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.constants import END, START
@@ -54,48 +56,83 @@ class PokerService:
         return {"messages": [response], "llm_calls": state.get("llm_calls", 0) + 1}
 
     async def _create_dealer_agent(self, state: PokerState):
-        """Логика начала раздачи (как у тебя, но с фиксом инициализации)"""
-        sb_amount, bb_amount = state.small_blind, state.big_blind
+        # 1. Загружаем текущие данные из стейта
+        board = list(state.board)
+        street = state.street
+        new_pot = state.pot
+        new_stacks = list(state.player_stacks) or [1000] * state.num_players
+        current_hands = dict(state.hands)
 
-        new_stacks = list(state.player_stacks)
-        if not new_stacks:
-            new_stacks = [1000] * state.num_players
+        # --- ЛОГИКА РАЗДАЧИ ---
+        if not current_hands:
+            # САМОЕ НАЧАЛО: Раздаем руки всем игрокам
+            current_hands = PokerDeck.deal_hands(state.num_players)
 
-        actual_sb = min(new_stacks[0], sb_amount)
-        new_stacks[0] -= actual_sb
-        actual_bb = min(new_stacks[1], bb_amount)
-        new_stacks[1] -= actual_bb
+            # Списываем блайнды (только один раз в начале игры!)
+            actual_sb = min(new_stacks[0], state.small_blind)
+            new_stacks[0] -= actual_sb
+            actual_bb = min(new_stacks[1], state.big_blind)
+            new_stacks[1] -= actual_bb
+            new_pot = actual_sb + actual_bb
 
-        new_pot = actual_sb + actual_bb
+            opponent_actions_text = "Блайнды поставлены. Ждем вашего хода."
+        else:
+            used_cards = []
+            for h in current_hands.values():
+                used_cards.extend([c.strip() for c in h.split(",")])
+            used_cards.extend(board)
 
+            # Переходим на следующую улицу и докладываем карты
+            if street == "preflop":
+                board = self.get_remaining_cards(3, used_cards)
+                street = "flop"
+            elif street == "flop":
+                board.extend(self.get_remaining_cards(1, used_cards))
+                street = "turn"
+            elif street == "turn":
+                board.extend(self.get_remaining_cards(1, used_cards))
+                street = "river"
+
+            opponent_actions_text = "Торги на прошлой улице завершены. Карты открыты."
+
+        # --- РАБОТА С LLM ---
         prompt_text = load_poker_prompt(role="dealer")
-        # Оборачиваем строку в объект, который понимает оператор "|"
         prompt_template = PromptTemplate.from_template(prompt_text)
+        chain = prompt_template | self.llm_service.get_llm() | StrOutputParser()
 
-        chain = prompt_template | self.llm_service.get_llm()
+        payload = {
+            "chat_history": state.messages,
+            "current_player_idx": 0,
+            "num_players": state.num_players,
+            "cards": f"Ваша рука: [{current_hands}]",
+            "board": f"[{', '.join(board)}]" if board else "На столе пусто",
+            "pot": f"Текущий банк: {new_pot} фишек",
+            "street": street,
+            "small_blind": state.small_blind,
+            "big_blind": state.big_blind,
+            "opponent_actions": opponent_actions_text,
+        }
 
-        num_players = getattr(state, "num_players", 1)
+        response = await chain.ainvoke(payload)
 
-        response = await chain.ainvoke(
-            {
-                "chat_history": state.messages,
-                "current_player_idx": 0,
-                "num_players": num_players,
-                "cards": state.hands.get("human", "Не розданы"),
-                "board": getattr(state, "board", "Пусто"),
-                "pot": new_pot,
-            }
-        )
-
-        print(response)
-
+        # --- ВОЗВРАТ ОБНОВЛЕННОГО СТЕЙТА ---
         return {
             "messages": [response],
             "pot": new_pot,
             "player_stacks": new_stacks,
+            "hands": current_hands,
+            "board": board,
+            "street": street,
             "llm_calls": state.llm_calls + 1,
-            "current_player_idx": 2 % state.num_players,
+            "current_player_idx": 0,  # После выхода карт ход всегда у человека (позиция 0)
         }
+
+    def get_remaining_cards(self, count: int, exclude: list):
+        """Вспомогательный метод: берет случайные карты, которых нет в exclude"""
+        full_deck = [f"{r}{s}" for r in PokerDeck.ranks for s in PokerDeck.suits]
+        remaining = [c for c in full_deck if c not in exclude]
+        random.shuffle(remaining)
+        return [remaining.pop() for _ in range(count)]
 
     def _router(self, state: PokerState) -> Literal["human_player", "ai_player", "__end__"]:
         """Главный мозг графа: решает кто ходит следующим"""
@@ -146,3 +183,31 @@ class PokerService:
     async def _human_node(self, state: PokerState):
         # Эта нода ничего не делает, просто точка остановки
         return {"current_player_idx": 0}
+
+
+class PokerDeck:
+    ranks: ClassVar[list[str]] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+    suits: ClassVar[list[str]] = ["♠", "♣", "♥", "♦"]
+
+    @classmethod
+    def _get_full_deck(cls):
+        return [f"{r}{s}" for r in cls.ranks for s in cls.suits]
+
+    @classmethod
+    def deal_hands(cls, num_players: int):
+        """Раздает карты игрокам (начало префлопа)."""
+        deck = cls._get_full_deck()
+        random.shuffle(deck)
+
+        hands = {}
+        hands["human"] = f"{deck.pop()}, {deck.pop()}"
+        for i in range(1, num_players):
+            hands[f"ai_{i}"] = f"{deck.pop()}, {deck.pop()}"
+        return hands
+
+    @classmethod
+    def get_remaining_cards(cls, count: int, exclude: list):
+        """Добирает N карт для стола, которых нет в exclude."""
+        deck = [c for c in cls._get_full_deck() if c not in exclude]
+        random.shuffle(deck)
+        return [deck.pop() for _ in range(count)]
